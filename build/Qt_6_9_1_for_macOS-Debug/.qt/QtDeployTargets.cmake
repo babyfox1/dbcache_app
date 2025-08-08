@@ -1,0 +1,2 @@
+set(__QT_DEPLOY_TARGET_dbcache_app_FILE /Users/nagibator/dbcache_app/build/Qt_6_9_1_for_macOS-Debug/dbcache_app.app/Contents/MacOS/dbcache_app)
+set(__QT_DEPLOY_TARGET_dbcache_app_TYPE EXECUTABLE)
