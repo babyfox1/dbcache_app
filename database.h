@@ -2,7 +2,6 @@
 
 #include "treenode.h"
 #include <memory>
-#include <unordered_map>
 #include <QString>
 
 class Database {
@@ -15,8 +14,8 @@ public:
     std::shared_ptr<TreeNode> getRoot();
 
 private:
+    std::shared_ptr<TreeNode> recursive_find(const std::shared_ptr<TreeNode>& node, const QString& id);
     void createTestData();
 
-    std::unordered_map<QString, std::shared_ptr<TreeNode>> storage;
     std::shared_ptr<TreeNode> root;
 };

@@ -3,7 +3,6 @@
 #include "treenode.h"
 #include "database.h"
 #include <memory>
-#include <unordered_map>
 #include <QString>
 
 class Cache {
@@ -20,7 +19,8 @@ public:
     std::shared_ptr<TreeNode> getRoot();
 
 private:
+    std::shared_ptr<TreeNode> recursiveFind(const std::shared_ptr<TreeNode>& node, const QString& id) const;
     void cloneNodeRecursive(const std::shared_ptr<TreeNode>& src, std::shared_ptr<TreeNode> dstParent);
-    std::unordered_map<QString, std::shared_ptr<TreeNode>> cache;
+    void markSubtreeDeleted(const std::shared_ptr<TreeNode>& node);
     std::shared_ptr<TreeNode> root;
 };

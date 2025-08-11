@@ -4,39 +4,47 @@ Database::Database() {
     createTestData();
 }
 
-std::shared_ptr<TreeNode> Database::getNode(const QString& id) {
-    if (storage.count(id)) {
-        return storage[id];
+std::shared_ptr<TreeNode> Database::recursive_find(const std::shared_ptr<TreeNode>& node, const QString& id) {
+    if (!node) return {};
+    if (node->id == id) return node;
+
+    for (const auto& child : std::as_const(node->children)) {
+        if (auto found = recursive_find(child, id)) {
+            return found;
+        }
     }
-    return nullptr;
+    return {};
+}
+
+std::shared_ptr<TreeNode> Database::getNode(const QString& id) {
+    return recursive_find(root, id);
 }
 
 void Database::saveNode(const std::shared_ptr<TreeNode>& node) {
-    if (!storage.count(node->id)) {
-        auto newNode = std::make_shared<TreeNode>(node->id, node->data);
-        newNode->isDeleted = node->isDeleted;
+    if (!node) return;
 
-        storage[newNode->id] = newNode;
+    if (node->parent.expired()) {
+        root = node;
+        node->parent.reset();
+        return;
+    }
 
-        if (auto parent = node->parent.lock()) {
-            if (storage.count(parent->id)) {
-                storage[parent->id]->children.push_back(newNode);
-                newNode->parent = storage[parent->id];
-            }
+    if (auto parent = getNode(node->parent.lock()->id)) {
+        bool exists = std::any_of(parent->children.begin(), parent->children.end(),
+                                  [&](const std::shared_ptr<TreeNode>& ch) {
+                                      return ch.get() == node.get() || ch->id == node->id;
+                                  });
+        if (!exists) {
+            parent->children.push_back(node);
         }
-    }
-    else {
-        storage[node->id]->data = node->data;
-        storage[node->id]->isDeleted = node->isDeleted;
-    }
 
-    for (const auto& child : node->children) {
-        saveNode(child);
+        node->parent = parent;
+        return;
     }
 }
 
 void Database::reset() {
-    storage.clear();
+    root.reset();
     createTestData();
 }
 
@@ -45,24 +53,24 @@ std::shared_ptr<TreeNode> Database::getRoot() {
 }
 
 void Database::createTestData() {
-    storage.clear();
+    root.reset();
 
     root = std::make_shared<TreeNode>("root", "Root");
-    storage[root->id] = root;
+    saveNode(root);
 
     auto level1 = std::make_shared<TreeNode>("1", "Level 1", root);
-    root->children.push_back(level1);
-    storage[level1->id] = level1;
+    level1->parent = root;
+    saveNode(level1);
 
     auto level2 = std::make_shared<TreeNode>("2", "Level 2", level1);
-    level1->children.push_back(level2);
-    storage[level2->id] = level2;
+    level2->parent = level1;
+    saveNode(level2);
 
     auto level3 = std::make_shared<TreeNode>("3", "Level 3", level2);
-    level2->children.push_back(level3);
-    storage[level3->id] = level3;
+    level3->parent = level2;
+    saveNode(level3);
 
     auto level4 = std::make_shared<TreeNode>("4", "Level 4", level3);
-    level3->children.push_back(level4);
-    storage[level4->id] = level4;
+    level4->parent = level3;
+    saveNode(level4);
 }

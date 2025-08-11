@@ -2,42 +2,57 @@
 #include "database.h"
 #include <QMessageBox>
 #include <QUuid>
+
 Cache::Cache() {}
 
 void Cache::loadFromDb(const std::shared_ptr<TreeNode>& dbNode) {
-    cache.clear();
-    root = std::make_shared<TreeNode>(dbNode->id, dbNode->data);
-    cloneNodeRecursive(dbNode, nullptr);
-}
-
-void Cache::cloneNodeRecursive(const std::shared_ptr<TreeNode>& src, std::shared_ptr<TreeNode> dstParent) {
-    auto node = std::make_shared<TreeNode>(src->id, src->data, dstParent);
-    node->isDeleted = src->isDeleted;
-    cache[node->id] = node;
-
-    if (dstParent) dstParent->children.push_back(node);
-    else root = node;
-
-    for (const auto& child : src->children) {
-        cloneNodeRecursive(child, node);
+    root.reset();
+    if (dbNode) {
+        root = std::make_shared<TreeNode>(dbNode->id, dbNode->data);
+        cloneNodeRecursive(dbNode, root);
     }
 }
 
+void Cache::cloneNodeRecursive(const std::shared_ptr<TreeNode>& src, std::shared_ptr<TreeNode> dstParent) {
+    if (!src || !dstParent) return;
+
+    for (const auto& srcChild : src->children) {
+        auto newChild = std::make_shared<TreeNode>(srcChild->id, srcChild->data, dstParent);
+        newChild->isDeleted = srcChild->isDeleted;
+        dstParent->children.push_back(newChild);
+        cloneNodeRecursive(srcChild, newChild);
+    }
+}
+
+std::shared_ptr<TreeNode> Cache::recursiveFind(const std::shared_ptr<TreeNode>& node, const QString& id) const {
+    if (!node) return nullptr;
+    if (node->id == id) return node;
+
+    for (const auto& child : node->children) {
+        if (auto found = recursiveFind(child, id)) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+
 std::shared_ptr<TreeNode> Cache::getNode(const QString& id) {
-    return cache.count(id) ? cache[id] : nullptr;
+    return recursiveFind(root, id);
+}
+
+void Cache::markSubtreeDeleted(const std::shared_ptr<TreeNode>& node) {
+    if (!node) return;
+
+    node->isDeleted = true;
+    for (auto& child : node->children) {
+        markSubtreeDeleted(child);
+    }
 }
 
 void Cache::markDeleted(const QString& id) {
-    auto node = getNode(id);
-    if (!node) return;
-
-    std::function<void(std::shared_ptr<TreeNode>)> markSubtree = [&](std::shared_ptr<TreeNode> n) {
-        n->isDeleted = true;
-        for (auto& child : n->children) {
-            markSubtree(child);
-        }
-    };
-    markSubtree(node);
+    if (auto node = getNode(id)) {
+        markSubtreeDeleted(node);
+    }
 }
 
 void Cache::addChild(const QString& parentId, const QString& data) {
@@ -51,19 +66,26 @@ void Cache::addChild(const QString& parentId, const QString& data) {
         qWarning() << "Попытка добавить дочерний элемент к удаленному узлу:" << parentId;
         return;
     }
+
     QString newId = QUuid::createUuid().toString();
     auto newNode = std::make_shared<TreeNode>(newId, data, parent);
     parent->children.push_back(newNode);
-    cache[newId] = newNode;
 }
+
 void Cache::saveToDb(Database& db) {
-    for (auto& [id, node] : cache) {
-        db.saveNode(node);
-    }
+    std::function<void(const std::shared_ptr<TreeNode>&)> saveRecursive =
+        [&](const std::shared_ptr<TreeNode>& node) {
+            if (!node) return;
+            db.saveNode(node);
+            for (const auto& child : node->children) {
+                saveRecursive(child);
+            }
+        };
+
+    saveRecursive(root);
 }
 
 void Cache::reset() {
-    cache.clear();
     root.reset();
 }
 
@@ -72,6 +94,8 @@ std::shared_ptr<TreeNode> Cache::getRoot() {
 }
 
 bool Cache::isNodeDeleted(const QString& id) const {
-    auto it = cache.find(id);
-    return it != cache.end() && it->second->isDeleted;
+    if (auto node = recursiveFind(root, id)) {
+        return node->isDeleted;
+    }
+    return false;
 }
