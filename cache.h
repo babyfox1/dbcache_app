@@ -19,6 +19,7 @@ public:
     std::shared_ptr<TreeNode> getRoot();
 
 private:
+    void saveRecursive(const std::shared_ptr<TreeNode>& node, Database& db);
     std::shared_ptr<TreeNode> recursiveFind(const std::shared_ptr<TreeNode>& node, const QString& id) const;
     void cloneNodeRecursive(const std::shared_ptr<TreeNode>& src, std::shared_ptr<TreeNode> dstParent);
     void markSubtreeDeleted(const std::shared_ptr<TreeNode>& node);

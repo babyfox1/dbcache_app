@@ -16,6 +16,5 @@ public:
 private:
     std::shared_ptr<TreeNode> recursive_find(const std::shared_ptr<TreeNode>& node, const QString& id);
     void createTestData();
-
     std::shared_ptr<TreeNode> root;
 };

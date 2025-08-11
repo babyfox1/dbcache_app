@@ -57,13 +57,7 @@ void Cache::markDeleted(const QString& id) {
 
 void Cache::addChild(const QString& parentId, const QString& data) {
     auto parent = getNode(parentId);
-    if (!parent) {
-        qWarning() << "Родительский узел не найден:" << parentId;
-        return;
-    }
-
-    if (parent->isDeleted) {
-        qWarning() << "Попытка добавить дочерний элемент к удаленному узлу:" << parentId;
+    if (!parent || parent->isDeleted) {
         return;
     }
 
@@ -72,17 +66,16 @@ void Cache::addChild(const QString& parentId, const QString& data) {
     parent->children.push_back(newNode);
 }
 
-void Cache::saveToDb(Database& db) {
-    std::function<void(const std::shared_ptr<TreeNode>&)> saveRecursive =
-        [&](const std::shared_ptr<TreeNode>& node) {
-            if (!node) return;
-            db.saveNode(node);
-            for (const auto& child : node->children) {
-                saveRecursive(child);
-            }
-        };
+void Cache::saveRecursive(const std::shared_ptr<TreeNode>& node, Database& db) {
+    if (!node) return;
+    db.saveNode(node);
+    for (const auto& child : node->children) {
+        saveRecursive(child, db);
+    }
+}
 
-    saveRecursive(root);
+void Cache::saveToDb(Database& db) {
+    saveRecursive(root, db);
 }
 
 void Cache::reset() {
