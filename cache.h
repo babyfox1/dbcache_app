@@ -9,14 +9,14 @@ class Cache {
 public:
     Cache();
     void loadFromDb(const std::shared_ptr<TreeNode>& dbNode);
-    std::shared_ptr<TreeNode> getNode(const QString& id);
+    std::shared_ptr<TreeNode> getNode(const QString& id) const;
     bool isNodeDeleted(const QString& id) const;
     void addChild(const QString& parentId, const QString& data);
     void markDeleted(const QString& id);
     void saveToDb(Database& db);
     void reset();
 
-    std::shared_ptr<TreeNode> getRoot();
+    std::shared_ptr<TreeNode> getRoot() const;
 
 private:
     void saveRecursive(const std::shared_ptr<TreeNode>& node, Database& db);

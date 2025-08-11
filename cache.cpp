@@ -36,7 +36,7 @@ std::shared_ptr<TreeNode> Cache::recursiveFind(const std::shared_ptr<TreeNode>& 
     return nullptr;
 }
 
-std::shared_ptr<TreeNode> Cache::getNode(const QString& id) {
+std::shared_ptr<TreeNode> Cache::getNode(const QString& id) const {
     return recursiveFind(root, id);
 }
 
@@ -82,7 +82,7 @@ void Cache::reset() {
     root.reset();
 }
 
-std::shared_ptr<TreeNode> Cache::getRoot() {
+std::shared_ptr<TreeNode> Cache::getRoot() const {
     return root;
 }
 
